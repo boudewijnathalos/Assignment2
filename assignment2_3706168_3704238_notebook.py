@@ -145,50 +145,103 @@ class Graph(GraphBluePrint):
                 plt.arrow(node[1], node[0], (next_node[1] - node[1]) * 0.975, (next_node[0] - node[0]) * 0.975, color=color, length_includes_head=True, width=width, head_width=4 * width)
 
 ############ CODE BLOCK 15 ################
-    def __init__(self, map_, start=(0, 0)):
-        self.adjacency_list = {}
-        self.map = map_
-        self.start = start
-        self.road_grid = map_.grid
-
-        self.find_nodes()
-        self.find_edges()  # This will be implemented in the next notebook cell
-          
-    def find_edges(self):
-        """
-        This method does a depth-first/brute-force search for each node to find the edges of each node.
-        """
-        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-        for node in self.adjacency_list:
-            for direction in directions:
-                next_node, distance = self.find_next_node_in_adjacency_list(node, direction)
-                if next_node in self.adjacency_list and distance > 0:
-                    speed_limit = self.road_grid[node[0], node[1]]
-                    self.adjacency_list[node].add((next_node, distance, speed_limit))
-                    self.adjacency_list[next_node].add((node, distance, speed_limit))
+    def __init__(self, road_grid):
+        self.road_grid = road_grid
+        self.adjacency_list = defaultdict(set)
+        self.directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        self.find_edges()
 
     def find_next_node_in_adjacency_list(self, node, direction):
         """
-        This is a helper method for find_edges to find a single edge given a node and a direction.
+        Find the next node in a given direction and the distance to it.
 
         :param node: The node from which we try to find its "neighboring node" NOT its neighboring coordinates.
         :type node: tuple[int]
-        :param direction: The direction we want to search in this can only be 4 values (0, 1), (1, 0), (0, -1) or (-1, 0).
+        :param direction: The direction we want to search in; this can only be 4 values (0, 1), (1, 0), (0, -1), or (-1, 0).
         :type direction: tuple[int]
         :return: This returns the first node in this direction and the distance.
         :rtype: tuple[int], int 
         """
-        current = node
+        x, y = node
+        dx, dy = direction
         distance = 0
-        rows, cols = self.road_grid.shape
-        while True:
-            next_node = (current[0] + direction[0], current[1] + direction[1])
-            if (next_node[0] < 0 or next_node[0] >= rows or
-                next_node[1] < 0 or next_node[1] >= cols or
-                next_node in self.adjacency_list):
-                return next_node, distance
-            current = next_node
+        speed_limits = []
+
+        while 0 <= x + dx < self.road_grid.shape[0] and 0 <= y + dy < self.road_grid.shape[1]:
+            x += dx
+            y += dy
             distance += 1
+            speed_limits.append(self.road_grid[x, y])
+
+            if self.road_grid[x, y] != 0:
+                return (x, y), distance, max(set(speed_limits), key=speed_limits.count)  # mode of speed limits
+
+        return None, distance, None
+
+    def find_edges(self, start_nodes=None):
+        """
+        This method does a depth-first/brute-force search for each node to find the edges of each node.
+
+        :param start_nodes: Optional list of nodes to start the edge finding from.
+        """
+        if start_nodes is None:
+            start_nodes = [(i, j) for i in range(self.road_grid.shape[0]) for j in range(self.road_grid.shape[1]) if self.road_grid[i, j] != 0]
+
+        for node in start_nodes:
+            for direction in self.directions:
+                next_node, distance, speed_limit = self.find_next_node_in_adjacency_list(node, direction)
+                if next_node:
+                    self.adjacency_list[node].add((next_node, distance, speed_limit))
+
+############ CODE BLOCK 130 ################
+
+class BFSSolverShortestPath():
+    def __call__(self, graph, source, destination):
+        self.priorityqueue = [(source, 0)]
+        self.history = {source: (None, 0)}
+        self.destination = destination
+        self.graph = graph
+        print(f"Starting BFS from {source} to {destination}")
+        self.main_loop()
+        return self.find_path()
+
+    def find_path(self):
+        path = []
+        current_node = self.destination
+        while current_node is not None:
+            path.append(current_node)
+            current_node, _ = self.history[current_node]
+        path.reverse()
+        total_cost = self.history[self.destination][1]
+        return path, total_cost
+
+    def main_loop(self):
+        while self.priorityqueue:
+            self.priorityqueue.sort(key=lambda x: x[1])  # Sort priority queue by distance
+            current_node, current_cost = self.priorityqueue.pop(0)
+            print(f"Exploring node {current_node} with current cost {current_cost}")
+            if self.base_case(current_node):
+                print(f"Reached destination {self.destination}")
+                return
+            for next_node, distance, speed_limit in self.next_step(current_node):
+                self.step(current_node, next_node, distance, speed_limit)
+            print(f"Queue: {self.priorityqueue}")
+
+    def base_case(self, node):
+        return node == self.destination
+
+    def new_cost(self, previous_node, distance, speed_limit):
+        return self.history[previous_node][1] + distance
+
+    def step(self, node, new_node, distance, speed_limit):
+        new_cost = self.new_cost(node, distance, speed_limit)
+        if new_node not in self.history or new_cost < self.history[new_node][1]:
+            self.history[new_node] = (node, new_cost)
+            self.priorityqueue.append((new_node, new_cost))
+            print(f"Updating {new_node} with cost {new_cost} coming from {node}")
+
+    def next_step(self, node):
+        return self.graph.adjacency_list.get(node, [])
 
 ############ CODE BLOCK 120 ################
 

@@ -145,24 +145,53 @@ class Graph(GraphBluePrint):
                 plt.arrow(node[1], node[0], (next_node[1] - node[1]) * 0.975, (next_node[0] - node[0]) * 0.975, color=color, length_includes_head=True, width=width, head_width=4 * width)
 
 ############ CODE BLOCK 15 ################
-    def find_edges(self):
-        """
-        This method does a depth-first/brute-force search for each node to find the edges of each node.
-        """
-        raise NotImplementedError("Please complete this method")
+    def __init__(self, road_grid):
+        self.road_grid = road_grid
+        self.adjacency_list = defaultdict(set)
+        self.directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        self.find_edges()
 
     def find_next_node_in_adjacency_list(self, node, direction):
         """
-        This is a helper method for find_edges to find a single edge given a node and a direction.
+        Find the next node in a given direction and the distance to it.
 
         :param node: The node from which we try to find its "neighboring node" NOT its neighboring coordinates.
         :type node: tuple[int]
-        :param direction: The direction we want to search in this can only be 4 values (0, 1), (1, 0), (0, -1) or (-1, 0).
+        :param direction: The direction we want to search in; this can only be 4 values (0, 1), (1, 0), (0, -1), or (-1, 0).
         :type direction: tuple[int]
         :return: This returns the first node in this direction and the distance.
         :rtype: tuple[int], int 
         """
-        raise NotImplementedError("Please complete this method")
+        x, y = node
+        dx, dy = direction
+        distance = 0
+        speed_limits = []
+
+        while 0 <= x + dx < self.road_grid.shape[0] and 0 <= y + dy < self.road_grid.shape[1]:
+            x += dx
+            y += dy
+            distance += 1
+            speed_limits.append(self.road_grid[x, y])
+
+            if self.road_grid[x, y] != 0:
+                return (x, y), distance, max(set(speed_limits), key=speed_limits.count)  # mode of speed limits
+
+        return None, distance, None
+
+    def find_edges(self, start_nodes=None):
+        """
+        This method does a depth-first/brute-force search for each node to find the edges of each node.
+
+        :param start_nodes: Optional list of nodes to start the edge finding from.
+        """
+        if start_nodes is None:
+            start_nodes = [(i, j) for i in range(self.road_grid.shape[0]) for j in range(self.road_grid.shape[1]) if self.road_grid[i, j] != 0]
+
+        for node in start_nodes:
+            for direction in self.directions:
+                next_node, distance, speed_limit = self.find_next_node_in_adjacency_list(node, direction)
+                if next_node:
+                    self.adjacency_list[node].add((next_node, distance, speed_limit))
 
 
 ############ END OF CODE BLOCKS, START SCRIPT BELOW! ################
