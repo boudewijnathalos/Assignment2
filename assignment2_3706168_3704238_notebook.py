@@ -190,5 +190,80 @@ class Graph(GraphBluePrint):
             current = next_node
             distance += 1
 
+############ CODE BLOCK 120 ################
+
+class FloodFillSolverGraph(FloodFillSolver):
+    """
+    A class instance should at least contain the following attributes after being called:
+        :param queue: A queue that contains all the nodes that need to be visited.
+        :type queue: collections.deque
+        :param history: A dictionary containing the coordinates that will be visited and as values the coordinate that lead to this coordinate.
+        :type history: dict[tuple[int], tuple[int]]
+    """
+    def __call__(self, graph, source, destination):      
+        """
+        This method gives a shortest route through the grid from source to destination.
+        You start at the source and the algorithm ends if you reach the destination, both nodes should be included in the path.
+        A route consists of a list of nodes (which are coordinates).
+
+        Hint: The history is already given as a dictionary with as keys the node in the state-space graph and
+        as values the previous node from which this node was visited.
+
+        :param graph: The graph that represents the map.
+        :type graph: Graph
+        :param source: The node where the path starts.
+        :type source: tuple[int]
+        :param destination: The node where the path ends.
+        :type destination: tuple[int]
+        :return: The shortest route, which consists of a list of nodes and the length of the route.
+        :rtype: list[tuple[int]], float
+        """       
+        self.queue = deque([source])
+        self.history = {source: None}
+        self.Graph = Graph
+        self.destination = destination
+        
+        while self.queue:
+            current_node = self.queue.popleft()
+            if current_node == destination:
+                return self.find_path(destination)
+            for next_node in self.next_step(current_node, graph):
+                if next_node not in self.history:
+                    self.queue.append(next_node)
+                    self.history[next_node] = current_node
+        
+        return [], float('inf')
+        
+              
+
+    def find_path(self):
+        """
+        This method finds the shortest paths between the source node and the destination node.
+        It also returns the length of the path. 
+        
+        Note, that going from one node to the next has a length of 1.
+
+        :return: A path that is the optimal route from source to destination and its length.
+        :rtype: list[tuple[int]], float
+        """
+        path = []
+        current_node = destination
+        while current_node is not None:
+            path.append(current_node)
+            current_node = self.history[current_node]
+        path.reverse()
+        return path, len(path) - 1      
+
+    def next_step(self, node):
+        """
+        This method returns the next possible actions.
+
+        :param node: The current node
+        :type node: tuple[int]
+        :return: A list with possible next nodes that can be visited from the current node.
+        :rtype: list[tuple[int]]  
+        """
+        return [neighbor for neighbor, _, _ in self.graph[node]]
+
 
 ############ END OF CODE BLOCKS, START SCRIPT BELOW! ################
