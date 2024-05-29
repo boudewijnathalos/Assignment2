@@ -193,5 +193,55 @@ class Graph(GraphBluePrint):
                 if next_node:
                     self.adjacency_list[node].add((next_node, distance, speed_limit))
 
+############ CODE BLOCK 130 ################
+
+class BFSSolverShortestPath():
+    def __call__(self, graph, source, destination):
+        self.priorityqueue = [(source, 0)]
+        self.history = {source: (None, 0)}
+        self.destination = destination
+        self.graph = graph
+        print(f"Starting BFS from {source} to {destination}")
+        self.main_loop()
+        return self.find_path()
+
+    def find_path(self):
+        path = []
+        current_node = self.destination
+        while current_node is not None:
+            path.append(current_node)
+            current_node, _ = self.history[current_node]
+        path.reverse()
+        total_cost = self.history[self.destination][1]
+        return path, total_cost
+
+    def main_loop(self):
+        while self.priorityqueue:
+            self.priorityqueue.sort(key=lambda x: x[1])  # Sort priority queue by distance
+            current_node, current_cost = self.priorityqueue.pop(0)
+            print(f"Exploring node {current_node} with current cost {current_cost}")
+            if self.base_case(current_node):
+                print(f"Reached destination {self.destination}")
+                return
+            for next_node, distance, speed_limit in self.next_step(current_node):
+                self.step(current_node, next_node, distance, speed_limit)
+            print(f"Queue: {self.priorityqueue}")
+
+    def base_case(self, node):
+        return node == self.destination
+
+    def new_cost(self, previous_node, distance, speed_limit):
+        return self.history[previous_node][1] + distance
+
+    def step(self, node, new_node, distance, speed_limit):
+        new_cost = self.new_cost(node, distance, speed_limit)
+        if new_node not in self.history or new_cost < self.history[new_node][1]:
+            self.history[new_node] = (node, new_cost)
+            self.priorityqueue.append((new_node, new_cost))
+            print(f"Updating {new_node} with cost {new_cost} coming from {node}")
+
+    def next_step(self, node):
+        return self.graph.adjacency_list.get(node, [])
+
 
 ############ END OF CODE BLOCKS, START SCRIPT BELOW! ################
