@@ -220,28 +220,39 @@ class FloodFillSolverGraph(FloodFillSolver):
         """       
         self.queue = deque([source])
         self.history = {source: None}
+        self.Graph = Graph
         self.destination = destination
         
-        # Initialize queue with the source node
-        self.queue = deque([source])
-        # Initialize history to keep track of paths
-        self.history = {source: None}
+        while self.queue:
+            current_node = self.queue.popleft()
+            if current_node == destination:
+                return self.find_path(destination)
+            for next_node in self.next_step(current_node, graph):
+                if next_node not in self.history:
+                    self.queue.append(next_node)
+                    self.history[next_node] = current_node
         
-        self.main_loop()
-        return self.find_path()
+        return [], float('inf')
+        
               
 
-    # def find_path(self):
-    #     """
-    #     This method finds the shortest paths between the source node and the destination node.
-    #     It also returns the length of the path. 
+    def find_path(self):
+        """
+        This method finds the shortest paths between the source node and the destination node.
+        It also returns the length of the path. 
         
-    #     Note, that going from one node to the next has a length of 1.
+        Note, that going from one node to the next has a length of 1.
 
-    #     :return: A path that is the optimal route from source to destination and its length.
-    #     :rtype: list[tuple[int]], float
-    #     """
-             
+        :return: A path that is the optimal route from source to destination and its length.
+        :rtype: list[tuple[int]], float
+        """
+        path = []
+        current_node = destination
+        while current_node is not None:
+            path.append(current_node)
+            current_node = self.history[current_node]
+        path.reverse()
+        return path, len(path) - 1      
 
     def next_step(self, node):
         """
@@ -252,7 +263,97 @@ class FloodFillSolverGraph(FloodFillSolver):
         :return: A list with possible next nodes that can be visited from the current node.
         :rtype: list[tuple[int]]  
         """
-        return [neighbor for neighbor, _, _ in self.graph.adjacency_list.get(node, [])]
+        return [neighbor for neighbor, _, _ in self.graph[node]]
+
+############ CODE BLOCK 130 ################
+
+class BFSSolverShortestPath():
+    def __call__(self, graph, source, destination):
+        self.priorityqueue = [(source, 0)]
+        self.history = {source: (None, 0)}
+        self.destination = destination
+        self.graph = graph
+        self.main_loop()
+        return self.find_path()
+
+    def find_path(self):
+        path = []
+        current_node = self.destination
+        while current_node is not None:
+            path.append(current_node)
+            current_node, _ = self.history[current_node]
+        path.reverse()
+        total_cost = self.history[self.destination][1]
+        return path, total_cost
+
+    def main_loop(self):
+        while self.priorityqueue:
+            self.priorityqueue.sort(key=lambda x: x[1])  # Sort priority queue by distance
+            current_node, current_cost = self.priorityqueue.pop(0)
+            if self.base_case(current_node):
+                return
+            for next_node, distance, speed_limit in self.next_step(current_node):
+                self.step(current_node, next_node, distance, speed_limit)
+
+    def base_case(self, node):
+        return node == self.destination
+
+    def new_cost(self, previous_node, distance, speed_limit):
+        return self.history[previous_node][1] + distance
+
+    def step(self, node, new_node, distance, speed_limit):
+        new_cost = self.new_cost(node, distance, speed_limit)
+        if new_node not in self.history or new_cost < self.history[new_node][1]:
+            self.history[new_node] = (node, new_cost)
+            self.priorityqueue.append((new_node, new_cost))
+
+    def next_step(self, node):
+        return self.graph.adjacency_list.get(node, [])
+
+############ CODE BLOCK 200 ################
+
+class BFSSolverFastestPath(BFSSolverShortestPath):
+    """
+    A class instance should at least contain the following attributes after being called:
+        :param priorityqueue: A priority queue that contains all the nodes that need to be visited 
+                              including the time it takes to reach these nodes.
+        :type priorityqueue: list[tuple[tuple[int], float]]
+        :param history: A dictionary containing the nodes that will be visited and 
+                        as values the node that lead to this node and
+                        the time it takes to get to this node.
+        :type history: dict[tuple[int], tuple[tuple[int], float]]
+    """   
+    def __call__(self, graph, source, destination, vehicle_speed):      
+        """
+        This method gives a fastest route through the grid from source to destination.
+
+        This is the same as the `__call__` method from `BFSSolverShortestPath` except that 
+        we need to store the vehicle speed. 
+        
+        Here, you can see how we can overwrite the `__call__` method but 
+        still use the `__call__` method of BFSSolverShortestPath using `super`.
+        """
+        self.vehicle_speed = vehicle_speed
+        return super(BFSSolverFastestPath, self).__call__(graph, source, destination)
+
+    def new_cost(self, previous_node, distance, speed_limit):
+        """
+        This is a helper method that calculates the new cost to go from the previous node to
+        a new node with a distance and speed_limit between the previous node and new node.
+
+        Use the `speed_limit` and `vehicle_speed` to determine the time/cost it takes to go to
+        the new node from the previous_node and add the time it took to reach the previous_node to it..
+
+        :param previous_node: The previous node that is the fastest way to get to the new node.
+        :type previous_node: tuple[int]
+        :param distance: The distance between the node and new_node
+        :type distance: int
+        :param speed_limit: The speed limit on the road from node to new_node. 
+        :type speed_limit: float
+        :return: The cost to reach the node.
+        :rtype: float
+        """
+        raise NotImplementedError("Please complete this method")
 
 
 ############ END OF CODE BLOCKS, START SCRIPT BELOW! ################
