@@ -311,7 +311,6 @@ class BFSSolverShortestPath():
         return self.graph.adjacency_list.get(node, [])
 
 ############ CODE BLOCK 200 ################
-
 class BFSSolverFastestPath(BFSSolverShortestPath):
     """
     A class instance should at least contain the following attributes after being called:
@@ -334,6 +333,7 @@ class BFSSolverFastestPath(BFSSolverShortestPath):
         still use the `__call__` method of BFSSolverShortestPath using `super`.
         """
         self.vehicle_speed = vehicle_speed
+        print(f"Finding fastest path from {source} to {destination}, Vehicle speed: {self.vehicle_speed}")  # Debug statement
         return super(BFSSolverFastestPath, self).__call__(graph, source, destination)
 
     def new_cost(self, previous_node, distance, speed_limit):
@@ -356,6 +356,123 @@ class BFSSolverFastestPath(BFSSolverShortestPath):
         effective_speed = min(self.vehicle_speed, speed_limit)
         travel_time = distance / effective_speed
         return self.history[previous_node][1] + travel_time
+
+############ CODE BLOCK 210 ################
+
+def coordinate_to_node(map_, graph, coordinate):
+    """
+    This function finds a path from a coordinate to its closest nodes.
+    A closest node is defined as the first node you encounter if you go a certain direction.
+    This means that unless the coordinate is a node, you will need to find two closest nodes.
+    If the coordinate is a node then return a list with only the coordinate itself.
+
+    :param map_: The map of the graph
+    :type map_: Map
+    :param graph: A Graph of the map
+    :type graph: Graph
+    :param coordinate: The coordinate from which we want to find the closest node in the graph
+    :type coordinate: tuple[int]
+    :return: This returns a list of closest nodes which contains either 1 or 2 nodes.
+    :rtype: list[tuple[int]]
+    """
+    if coordinate in graph:
+        return [coordinate]
+
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    closest_nodes = set()
+
+    for dx, dy in directions:
+        x, y = coordinate
+        while 0 <= x < map_.grid.shape[0] and 0 <= y < map_.grid.shape[1]:
+            if (x, y) in graph:
+                closest_nodes.add((x, y))
+                break
+            x += dx
+            y += dy
+
+    return list(closest_nodes)
+
+############ CODE BLOCK 220 ################
+
+def create_country_graphs(map_):
+    """
+    This function returns a list of all graphs of a country map, where the first graph is the highways and de rest are the cities.
+
+    :param map_: The country map
+    :type map_: Map
+    :return: A list of graphs
+    :rtype: list[Graph]
+    """
+    raise NotImplementedError("Please complete this method")
+
+############ CODE BLOCK 300 ################
+
+def path_length(coordinate, closest_nodes, map_, vehicle_speed):
+    return [(node, (abs(node[0] - coordinate[0]) + abs(node[1] - coordinate[1])) / min(vehicle_speed, map_[coordinate])) for node in closest_nodes] 
+
+def find_path(coordinate_A, coordinate_B, map_, vehicle_speed, find_at_most=3):
+    """
+    Find the optimal path according to the divide and conquer strategy from coordinate A to coordinate B.
+
+    See hints and rules above on how to do this.
+
+    :param coordinate_A: The start coordinate
+    :type coordinate_A: tuple[int]
+    :param coordinate_B: The end coordinate
+    :type coordinate_B: tuple[int]
+    :param map_: The map on which the path needs to be found
+    :type map_: Map
+    :param vehicle_speed: The maximum vehicle speed
+    :type vehicle_speed: float
+    :param find_at_most: The number of routes to find for each path finding algorithm, defaults to 3. 
+                         Note, that this is only needed if you did 2.3.
+    :type find_at_most: int, optional
+    :return: The path between coordinate_A and coordinate_B. Also, return the cost.
+    :rtype: list[tuple[int]], float
+    """
+    
+    # Initialize the Graph for the map
+    graph = Graph(map_)
+
+    # Find the closest nodes to coordinate A and coordinate B
+    closest_nodes_A = coordinate_to_node(map_, graph, coordinate_A)
+    closest_nodes_B = coordinate_to_node(map_, graph, coordinate_B)
+
+    print(f"Closest nodes to {coordinate_A}: {closest_nodes_A}")
+    print(f"Closest nodes to {coordinate_B}: {closest_nodes_B}")
+
+    # Find the fastest paths from coordinate A to its closest nodes
+    solver = BFSSolverFastestPath()
+    paths_from_A = []
+    for node_A in closest_nodes_A:
+        print(f"Finding path from {coordinate_A} to {node_A}")
+        path_A, cost_A = solver(graph, coordinate_A, node_A, vehicle_speed)
+        print(f"Path from {coordinate_A} to {node_A}: {path_A} with cost {cost_A}")
+        paths_from_A.append((path_A, cost_A))
+
+    # Find the fastest paths from coordinate B to its closest nodes
+    paths_from_B = []
+    for node_B in closest_nodes_B:
+        print(f"Finding path from {coordinate_B} to {node_B}")
+        path_B, cost_B = solver(graph, coordinate_B, node_B, vehicle_speed)
+        print(f"Path from {coordinate_B} to {node_B}: {path_B} with cost {cost_B}")
+        paths_from_B.append((path_B, cost_B))
+
+    # Find the best entry and exit points on the highway
+    highway_paths = []
+    for path_A, cost_A in paths_from_A:
+        for path_B, cost_B in paths_from_B:
+            print(f"Finding highway path from {path_A[-1]} to {path_B[0]}")
+            highway_path, highway_cost = solver(graph, path_A[-1], path_B[0], vehicle_speed)
+            print(f"Highway path from {path_A[-1]} to {path_B[0]}: {highway_path} with cost {highway_cost}")
+            total_cost = cost_A + highway_cost + cost_B
+            highway_paths.append((path_A + highway_path[1:] + path_B[1:], total_cost))
+
+    # Select the path with the minimum cost
+    best_path, best_cost = min(highway_paths, key=lambda x: x[1])
+    print(f"Best path: {best_path} with cost {best_cost}")
+
+    return best_path, best_cost
 
 
 ############ END OF CODE BLOCKS, START SCRIPT BELOW! ################
